@@ -2,6 +2,12 @@ import numpy as np
 import pandas as pd
 
 # bits methods
+def remove_digit(x, digit):
+    l = x.split(",")
+    if str(digit) in l:
+        l.remove(str(digit))
+    return ",".join(l)
+
 def compare_bits(bit, other_bit):
     '''
     returns 0 if equal.
@@ -17,7 +23,7 @@ def compare_bits(bit, other_bit):
         return 1
     return None
 def diff_digits(term1, term2):
-    return DiffDigits([i for i in range(len(term1)) if compare_bits(term1[i], term2[i]) == None])
+    return [i for i in range(len(term1)) if compare_bits(term1[i], term2[i]) == None]
 def is_contained(term1, term2):
     '''
     returns 1 if term1 contained in term2 (term2 -> term1).
@@ -36,7 +42,7 @@ def is_contained(term1, term2):
                     res = comp
     return res
 
-def is_speciel_complement(term1, term2):
+def is_complement(term1, term2):
     '''
     returns the different stable bit if term1 is contained in term2 at all bits except one.
     otherwise returns -1.
@@ -44,33 +50,13 @@ def is_speciel_complement(term1, term2):
     diff = diff_digits(term1, term2)
     if len(diff) == 1:
         for i in range(len(term1)):
-            if compare_bits(term1[i], term2[i]) == -1:
+            if i != diff[0] and compare_bits(term1[i], term2[i]) != 0:
                 return -1
-        return diff.get_digit()
+        return diff[0]
     return -1
 
 def remove_literal(term, digit):
     return term[:digit] + 'u' + term[digit+1:]
-
-class DiffDigits(object):
-    def __init__(self, digits):
-        self.digits = set(digits)
-        self.removed_digits = set()
-
-    def remove(self, digit):
-        if digit in self.digits and digit != None:
-            self.digits.remove(digit)
-            self.removed_digits.add(digit)
-        return self
-
-    def get_digit(self):
-        return next(iter(self.digits))
-
-    def __len__(self):
-        return len(self.digits)
-
-    def __str__(self):
-        return str(self.digits)[1:-1]
 
 class BooleanFunction(object):
     def __init__(self, n, one_inputs):
@@ -93,57 +79,62 @@ class BooleanFunction(object):
         for one_input in self.one_inputs:
             row = []
             for zero_input in self.zero_inputs:
-                row.append(diff_digits(one_input, zero_input))
+                row.append(str(diff_digits(one_input, zero_input))[1:-1])
             table.append(row)
 
         x = np.array(table)
         return pd.DataFrame(x, index=self.one_inputs, columns=self.zero_inputs)
 
-    def find_merge(self, df, axis=1):
-        terms = df.index if axis == 1 else df.columns
-        for term1 in terms:
-            for term2 in terms:
-                res = self.merge(term1, term2)
-                if res:
-                    new_term, drop_term, diff_digit = res
-                    series = df.loc[drop_term] if axis == 1 else df[drop_term]
-                    new_series = series.apply(lambda x: x.remove(diff_digit))
-                    return term1, term2, new_term, new_series, drop_term
-        return None
+    def merge_rows_or_columns(self, df, axis=1):
+        continue_flag = True
+        while continue_flag:
+            continue_flag = False
+            terms = list(df.index) if axis == 1 else list(df.columns)
+            for term1 in terms:
+                drop_flag = False
+                restart_flag = False
+                for term2 in terms:
+                    result = self.merge(term1, term2)
+                    if result:
+                        new_term, drop_term, diff_digit = result
+                        if new_term: # continue if a new term was created
+                            restart_flag = True
+                            if axis == 1:
+                                series = df.loc[drop_term].copy(deep=True)
+                                df.loc[new_term] = series.apply(lambda x: remove_digit(x, diff_digit))
+                            else:
+                                series = df[drop_term].copy(deep=True)
+                                df[new_term] = series.apply(lambda x: remove_digit(x, diff_digit))
+                        if drop_term == term1:
+                            drop_flag = True
+
+                if drop_flag:
+                    df = df.drop(index=list([term1])) if axis == 1 else df.drop(columns=list([term1]))
+                if restart_flag:
+                    continue_flag = True
+                    break
+        return df
 
     def merge(self, term1, term2):
         '''
         new_term, drop, diff
         '''
-        digit = is_speciel_complement(term1, term2)
-        if digit != -1:  # spciel complement, we can drop term1 and add u
+        digit = is_complement(term1, term2)
+        if digit != -1:  # complement, we can drop term1 and add u
             return remove_literal(term1, digit), term1, digit
-        digit = is_speciel_complement(term2, term1)
-        if digit != -1:  # spciel complement, we can drop term2 and add u
-            return remove_literal(term2, digit), term2, digit
         res = is_contained(term1, term2)
         if res == -1:  # we can drop term2
-            return term1, term2, None
+            return None, term2, None
         if res == 1:  # we can drop term1
-            return term2, term1, None
+            return None, term1, None
         return None # cannot merge
 
     def __create_partial_matrix(self):
-        df = self.full_matrix
+        df = self.__create_full_matrix()
         # merge rows
-        res = self.find_merge(df, axis=1)
-        while res:
-            term1, term2, new_term, new_series, drop_term = res
-            df = df.drop(index=list([drop_term]))
-            df.loc[new_term] = new_series
-            res = self.find_merge(df, axis=1)
+        df = self.merge_rows_or_columns(df, axis=1)
         # merge cols
-        res = self.find_merge(df, axis=0)
-        while res:
-            term1, term2, new_term, new_series, drop_term = res
-            df = df.drop(columns=list([drop_term]))
-            df[new_term] = new_series
-            res = self.find_merge(df, axis=0)
+        df = self.merge_rows_or_columns(df, axis=0)
         return df
 
 def main():
