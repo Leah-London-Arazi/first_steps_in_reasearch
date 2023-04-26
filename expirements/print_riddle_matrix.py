@@ -74,46 +74,48 @@ class BooleanFunction(object):
     def calc(self, input):
         return 1 if input in self.one_inputs else 0
 
-    def __create_full_matrix(self):
+    def __create_matrix(self, rows, columns):
         table = []
-        for one_input in self.one_inputs:
+        for term1 in rows:
             row = []
-            for zero_input in self.zero_inputs:
-                row.append(str(diff_digits(one_input, zero_input))[1:-1])
+            for term2 in columns:
+                row.append(str(diff_digits(term1, term2))[1:-1])
             table.append(row)
 
         x = np.array(table)
-        return pd.DataFrame(x, index=self.one_inputs, columns=self.zero_inputs)
+        return pd.DataFrame(x, index=rows, columns=columns)
 
-    def merge_rows_or_columns(self, df, axis=1):
+    def __create_full_matrix(self):
+        return self.__create_matrix(self.one_inputs, self.zero_inputs)
+
+    def merge_terms(self, terms):
+        prime_terms = list(terms)
         continue_flag = True
         while continue_flag:
+            i = 0
             continue_flag = False
-            terms = list(df.index) if axis == 1 else list(df.columns)
-            for term1 in terms:
+            while i < len(prime_terms):
                 drop_flag = False
                 restart_flag = False
-                for term2 in terms:
-                    result = self.merge(term1, term2)
+                for j in range(len(prime_terms)):
+                    result = self.merge(prime_terms[i], prime_terms[j])
                     if result:
                         new_term, drop_term, diff_digit = result
                         if new_term: # continue if a new term was created
                             restart_flag = True
-                            if axis == 1:
-                                series = df.loc[drop_term].copy(deep=True)
-                                df.loc[new_term] = series.apply(lambda x: remove_digit(x, diff_digit))
-                            else:
-                                series = df[drop_term].copy(deep=True)
-                                df[new_term] = series.apply(lambda x: remove_digit(x, diff_digit))
-                        if drop_term == term1:
+                            prime_terms.append(new_term)
+                        if drop_term == prime_terms[i]:
+                            restart_flag = True
                             drop_flag = True
 
                 if drop_flag:
-                    df = df.drop(index=list([term1])) if axis == 1 else df.drop(columns=list([term1]))
+                    prime_terms.remove(prime_terms[i])
                 if restart_flag:
                     continue_flag = True
                     break
-        return df
+                i += 1
+
+        return prime_terms
 
     def merge(self, term1, term2):
         '''
@@ -130,18 +132,16 @@ class BooleanFunction(object):
         return None # cannot merge
 
     def __create_partial_matrix(self):
-        df = self.__create_full_matrix()
         # merge rows
-        df = self.merge_rows_or_columns(df, axis=1)
+        one_terms = self.merge_terms(self.one_inputs)
         # merge cols
-        df = self.merge_rows_or_columns(df, axis=0)
-        return df
+        zero_terms = self.merge_terms(self.zero_inputs)
+        return self.__create_matrix(one_terms, zero_terms)
 
 def main():
     f = BooleanFunction(3, ['111', '101', '010', '011']) # mux
     print(f.full_matrix)
     print(f.partial_matrix)
-    # not working on mux!
 
 if __name__ == '__main__':
     main()
