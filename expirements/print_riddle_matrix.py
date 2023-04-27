@@ -22,8 +22,10 @@ def compare_bits(bit, other_bit):
     if other_bit == 'u':
         return 1
     return None
+
 def diff_digits(term1, term2):
     return [i for i in range(len(term1)) if compare_bits(term1[i], term2[i]) == None]
+
 def is_contained(term1, term2):
     '''
     returns 1 if term1 contained in term2 (term2 -> term1).
@@ -66,7 +68,7 @@ class BooleanFunction(object):
         """
         self.n = n
         self.formatting = "{" + "0:0{}b".format(n) + "}"
-        self.one_inputs = set(one_inputs)
+        self.one_inputs = one_inputs
         self.zero_inputs = [self.formatting.format(i) for i in range(2**n) if self.formatting.format(i) not in set(one_inputs)]
         self.full_matrix = self.__create_full_matrix()
         self.partial_matrix = self.__create_partial_matrix()
@@ -90,29 +92,27 @@ class BooleanFunction(object):
 
     def merge_terms(self, terms):
         prime_terms = list(terms)
-        continue_flag = True
-        while continue_flag:
-            i = 0
-            continue_flag = False
-            while i < len(prime_terms):
-                drop_flag = False
-                restart_flag = False
-                for j in range(len(prime_terms)):
-                    result = self.merge(prime_terms[i], prime_terms[j])
-                    if result:
-                        new_term, drop_term, diff_digit = result
-                        if new_term: # continue if a new term was created
-                            restart_flag = True
+        i = 0
+        while i < len(prime_terms):
+            drop_flag = False
+            restart_flag = False
+            for j in range(len(prime_terms)):
+                result = self.merge(prime_terms[i], prime_terms[j])
+                if result:
+                    new_term, drop_term, diff_digit = result
+                    if new_term: # continue if a new term was created
+                        restart_flag = True
+                        if new_term not in prime_terms:
                             prime_terms.append(new_term)
-                        if drop_term == prime_terms[i]:
-                            restart_flag = True
-                            drop_flag = True
+                    if drop_term == prime_terms[i]:
+                        restart_flag = True
+                        drop_flag = True
 
-                if drop_flag:
-                    prime_terms.remove(prime_terms[i])
-                if restart_flag:
-                    continue_flag = True
-                    break
+            if drop_flag:
+                prime_terms.remove(prime_terms[i])
+            if restart_flag:
+                i = 0
+            else:
                 i += 1
 
         return prime_terms
@@ -140,6 +140,18 @@ class BooleanFunction(object):
 
 def main():
     f = BooleanFunction(3, ['111', '101', '010', '011']) # mux
+    print(f.full_matrix)
+    print(f.partial_matrix)
+    f = BooleanFunction(3, ['001', '101', '010'])
+    print(f.full_matrix)
+    print(f.partial_matrix)
+    f = BooleanFunction(3, ['001', '011', '111']) # monotone
+    print(f.full_matrix)
+    print(f.partial_matrix)
+    f = BooleanFunction(3, ['001', '000', '111']) # there is a gap!
+    print(f.full_matrix)
+    print(f.partial_matrix)
+    f = BooleanFunction(3, ['010', '000', '111']) # there is a gap!
     print(f.full_matrix)
     print(f.partial_matrix)
 
