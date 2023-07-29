@@ -221,7 +221,10 @@ def print_all_matrices(n, monotone=False, to_file=False, file_path="", to_print_
         print(string)
 
 def main():
-    output_files_dir = r'C:\Users\Leah London Arazi\Dropbox\My PC (Leah-X1-Carbon)\Documents\Leah X1 Carbon\university\2023b\first steps in research\hazard free circuits\first_steps_in_reasearch\expirements'
+    '''
+    set output file dir
+    '''
+    output_files_dir = "."
     '''
     print all matrices for n=3
     '''
