@@ -87,7 +87,7 @@ class BooleanFunction(object):
         self.zero_inputs = [self.formatting.format(i) for i in range(2**n) if self.formatting.format(i) not in set(one_inputs)]
         self.full_matrix = self.__create_full_matrix()
         self.partial_matrix = self.__create_partial_matrix()
-        self.id = int("".join(['1' if self.formatting.format(i) in set(one_inputs) else '0' for i in range(2**n)]), 2)
+        self.id = int("".join(['1' if self.formatting.format(i) in set(one_inputs) else '0' for i in range(2**n)][::-1]), 2)
 
     def is_monotone(self):
         '''
@@ -205,7 +205,7 @@ def all_possible_matrices(n):
     func_formatting = "{" + "0:0{}b".format(2 ** n) + "}"
     inputs = [formatting.format(i) for i in range(2 ** n)]
     for i in range(2 ** (2 ** n)):
-        func = func_formatting.format(i)
+        func = func_formatting.format(i)[::-1]
         f = BooleanFunction(n, [inputs[k] for k in range(2 ** n) if func[k] == '1'])
         functions.append(f)
     return functions
