@@ -87,6 +87,7 @@ class BooleanFunction(object):
         self.zero_inputs = [self.formatting.format(i) for i in range(2**n) if self.formatting.format(i) not in set(one_inputs)]
         self.full_matrix = self.__create_full_matrix()
         self.partial_matrix = self.__create_partial_matrix()
+        self.id = int("".join(['1' if self.formatting.format(i) in set(one_inputs) else '0' for i in range(2**n)]), 2)
 
     def is_monotone(self):
         '''
@@ -177,6 +178,21 @@ class BooleanFunction(object):
                 return 1
         return 0
 
+    def get_derivative_as_function(self, x):
+        der = []
+        for i in range(2 ** self.n):
+            y = self.formatting.format(i)
+            if self.get_derivative(x, y) == 1:
+                der.append(y)
+        return BooleanFunction(self.n, der)
+
+    def get_all_derivatives(self):
+        all_der = []
+        for i in range(2 ** self.n):
+            x = self.formatting.format(i)
+            all_der.append(self.get_derivative_as_function(x))
+        return all_der
+
 def str_communication_matrices(f, header, as_html=True):
     string = "################ {} ################".format(header) + "\n" + \
              (f.full_matrix.to_html() if as_html else f.full_matrix) + "\n\n" + \
@@ -184,23 +200,20 @@ def str_communication_matrices(f, header, as_html=True):
     return string
 
 def all_possible_matrices(n):
-    '''
-    no complement functions! ('0...0' is fixed to 0)
-    '''
     functions = []
     formatting = "{" + "0:0{}b".format(n) + "}"
     func_formatting = "{" + "0:0{}b".format(2 ** n) + "}"
     inputs = [formatting.format(i) for i in range(2 ** n)]
-    for i in range(2 ** (2 ** n - 1)):
+    for i in range(2 ** (2 ** n)):
         func = func_formatting.format(i)
         f = BooleanFunction(n, [inputs[k] for k in range(2 ** n) if func[k] == '1'])
         functions.append(f)
     return functions
 
-def print_all_possible_matrices(n, monotone=False, to_file=False, file_path=""):
+def print_all_matrices(n, monotone=False, to_file=False, file_path="", to_print_functions=[]):
     func_formatting = "{" + "0:0{}b".format(2 ** n) + "}"
-    functions = all_possible_matrices(n)
-    string = "\n".join([str_communication_matrices(f, str(i) + " | " + func_formatting.format(i), as_html=to_file) for i,f in enumerate(functions) if f.is_monotone() or monotone])
+    functions = all_possible_matrices(n) if len(to_print_functions) == 0 else to_print_functions
+    string = "\n".join([str_communication_matrices(f, str(f.id) + " | " + func_formatting.format(f.id), as_html=to_file) for f in functions if not(f.is_monotone()) or monotone])
     if to_file:
         with open(file_path, "w") as file:
             file.write(string)
@@ -208,49 +221,35 @@ def print_all_possible_matrices(n, monotone=False, to_file=False, file_path=""):
         print(string)
 
 def main():
-    # output_files_dir = r'C:\Users\Leah London Arazi\Dropbox\My PC (Leah-X1-Carbon)\Documents\Leah X1 Carbon\university\2023b\first steps in research\hazard free circuits\first_steps_in_reasearch\expirements'
-    # print_all_possible_matrices(3, monotone=True, to_file=True, file_path=output_files_dir + "\\all_functions_3_inputs_with monotone.html")
+    output_files_dir = r'C:\Users\Leah London Arazi\Dropbox\My PC (Leah-X1-Carbon)\Documents\Leah X1 Carbon\university\2023b\first steps in research\hazard free circuits\first_steps_in_reasearch\expirements'
+    '''
+    print all matrices for n=3
+    '''
+    # print_all_matrices(3, monotone=True, to_file=True, file_path=output_files_dir + "\\all_functions_3_inputs_with_monotone.html")
+    # print_all_matrices(3, monotone=False, to_file=True, file_path=output_files_dir + "\\all_functions_3_inputs_no_monotone.html")
+    '''
+    print only monotone matrices for n=3
+    '''
     # functions = all_possible_matrices(3)
-    # for i,f in enumerate(functions):
-    #     if not f.is_monotone():
-    #         print_communication_matrices(f, str(i), to_file=True, file_path=output_file_path)
-    # output_file_path = r'C:\Users\Leah London Arazi\Dropbox\My PC (Leah-X1-Carbon)\Documents\Leah X1 Carbon\university\2023b\first steps in research\hazard free circuits\first_steps_in_reasearch\expirements\all_functions_4_inputs.html'
-    # functions = all_possible_matrices(4)
-    # for i,f in enumerate(functions):
-    #     if not f.is_monotone():
-    #         print_communication_matrices(f, str(i), to_file=True, file_path=output_file_path)
+    # mono_functions = []
+    # for i, f in enumerate(functions):
+    #      if f.is_monotone():
+    #          mono_functions.append(f)
+    # print_all_matrices(3, monotone=True, to_file=True, file_path=output_files_dir + "\\monotone_functions_3_inputs.html", to_print_functions=mono_functions)
     '''
-    trying to find a connection to the hazard derivative
+    print derivative matrices for a given function
     '''
-    # 10
-    f = BooleanFunction(3, ['000', '001', '010', '011', '101', '111'])
-    der = []
-    for i in range(2 ** 3):
-        y = f.formatting.format(i)
-        if f.get_derivative('000', y) == 1:
-            der.append(y)
-    derivative = BooleanFunction(3, der)
-    print(derivative.partial_matrix)
+    # f = BooleanFunction(3, ['100', '110'])
+    # all_der = f.get_all_derivatives()
+    # print_all_matrices(3, monotone=True, to_file=True,
+    #                    file_path=output_files_dir + "\\all_derivatives_of_f_3.html",
+    #                    to_print_functions=[f] + all_der)
 
-    # 12 (switching third and second digit from 10)
-    f = BooleanFunction(3, ['000', '001', '010', '011', '110', '111'])
-    der = []
-    for i in range(2 ** 3):
-        y = f.formatting.format(i)
-        if f.get_derivative('000', y) == 1:
-            der.append(y)
-    derivative = BooleanFunction(3, der)
-    print(derivative.partial_matrix)
+    # f = BooleanFunction(5, ['10101', '01010', '11111', '00001'])
+    # all_der = f.get_all_derivatives()
+    # print_all_matrices(5, monotone=True, to_file=True,
+    #                    file_path=output_files_dir + "\\all_derivatives_of_f_5.html",
+    #                    to_print_functions=all_der)
 
-    # 3 (monotone, we can get it from 10 by switching the second and the third digit, and then flipping the second digit)
-    f = BooleanFunction(3, ['000', '001', '010', '011', '100', '101'])
-    der = []
-    for i in range(2 ** 3):
-        y = f.formatting.format(i)
-        if f.get_derivative('010', y) == 1:
-            der.append(y)
-    derivative = BooleanFunction(3, der)
-    print(derivative.partial_matrix)
-    
 if __name__ == '__main__':
     main()
