@@ -87,7 +87,7 @@ class BooleanFunction(object):
         self.zero_inputs = [self.formatting.format(i) for i in range(2**n) if self.formatting.format(i) not in set(one_inputs)]
         self.full_matrix = self.__create_full_matrix()
         self.partial_matrix = self.__create_partial_matrix()
-        self.id = int("".join(['1' if self.formatting.format(i) in set(one_inputs) else '0' for i in range(2**n)][::-1]), 2)
+        self.id = int("".join(['1' if self.formatting.format(i) in set(one_inputs) else '0' for i in range(2**n)]), 2)
 
     def is_monotone(self):
         '''
@@ -205,15 +205,23 @@ def all_possible_matrices(n):
     func_formatting = "{" + "0:0{}b".format(2 ** n) + "}"
     inputs = [formatting.format(i) for i in range(2 ** n)]
     for i in range(2 ** (2 ** n)):
-        func = func_formatting.format(i)[::-1]
+        func = func_formatting.format(i)
         f = BooleanFunction(n, [inputs[k] for k in range(2 ** n) if func[k] == '1'])
         functions.append(f)
     return functions
 
-def print_all_matrices(n, monotone=False, to_file=False, file_path="", to_print_functions=[]):
+def print_all_matrices(n, monotone=False, derivatives=False, to_file=False, file_path="", to_print_functions=[]):
     func_formatting = "{" + "0:0{}b".format(2 ** n) + "}"
     functions = all_possible_matrices(n) if len(to_print_functions) == 0 else to_print_functions
-    string = "\n".join([str_communication_matrices(f, str(f.id) + " | " + func_formatting.format(f.id), as_html=to_file) for f in functions if not(f.is_monotone()) or monotone])
+    string = ""
+    for f in functions:
+        if not(f.is_monotone()) or monotone:
+            string += str_communication_matrices(f, str(f.id) + " | " + func_formatting.format(f.id), as_html=to_file)
+            string += "\n"
+            if derivatives:
+                der_f = f.get_all_derivatives()
+                string += "\n".join([str_communication_matrices(d, "Derivative of " + str(f.id) + " | " + func_formatting.format(d.id), as_html=to_file) for d in der_f])
+                string += "\n"
     if to_file:
         with open(file_path, "w") as file:
             file.write(string)
@@ -253,6 +261,10 @@ def main():
     # print_all_matrices(5, monotone=True, to_file=True,
     #                    file_path=output_files_dir + "\\all_derivatives_of_f_5.html",
     #                    to_print_functions=all_der)
+    '''
+    print all derivatives of all functions for n=4
+    '''
+    print_all_matrices(4, monotone=True, derivatives=True, to_file=True)
 
 if __name__ == '__main__':
     main()
